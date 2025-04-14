@@ -1,0 +1,41 @@
+
+
+ //envio de correo
+ {
+ "op":"enviardoc",
+ "ruta_xml":"D:\\CPE\\BETA\\10447915125-01-F010-8434392.XML",
+ "ruta_pdf":"D:\\CPE\\BETA\\10447915125-01-F010-8434392.PDF",
+ "archivo":"10447915125-01-F010-8434392", 
+ "smtp":"smtp.gmail.com", 
+ "usuario":"zy.jose.luis@gmail.com", 
+ "pass":"xxxxxxx",
+ "correoenvio":"zy.jose.luis@gmail.com", 
+ "nombreenvio":"NOMBRE ORIGEN", 
+ "destino":"zy.jose.luis@gmail.com", 
+ "nombredestino":"Jose Luis",
+ "titulo":"este es titulo de pruebaX XXXXXXXX",
+ "cuerpo":"este es cuerpo de prueba para facturacion XXXXXXX"
+ }
+ 
+ //consulta factura status-factura
+ {
+ "op":"revisardoc",
+ "tipo_comprobante":"01", 
+ "serie":"F001", 
+ "numero":"67", 
+ "ruc":"20604032891", 
+ "usuario_sol":"MODDATOS", 
+ "pass_sol":"moddatos"
+ }
+ 
+  //consulta factura status-cdr
+ {
+ "op":"revisardoc",
+ "tipo_comprobante":"01", 
+ "serie":"F001", 
+ "numero":"66", 
+ "ruc":"20604032891", 
+ "usuario_sol":"MODDATOS", 
+ "pass_sol":"moddatos", 
+ "ruta_cdr":"D:\\CPE\\BETA\\"
+ }

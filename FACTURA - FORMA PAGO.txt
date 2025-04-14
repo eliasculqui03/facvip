@@ -1,0 +1,78 @@
+{  
+   "txtTIPO_OPERACION": "0101",
+   "txtTOTAL_GRAVADAS":"0.50",
+   "txtSUB_TOTAL":"0.50",
+   "txtPOR_IGV": "18.00", 
+   "txtTOTAL_IGV":"0.09",
+   "ICBP":"0.50",
+   "txtTOTAL":"1.09",
+   "txtTOTAL_LETRAS":"SETECIENTOS TREINTA Y SIETE CON 50/100 SOLES",
+   "txtNRO_COMPROBANTE":"F010-5000",
+   "txtFECHA_DOCUMENTO":"2016-12-04",
+   "txtFECHA_VTO": "2016-12-04",
+   "txtCOD_TIPO_DOCUMENTO":"01",
+   "txtCOD_MONEDA":"PEN",
+   "detalle_forma_pago":[
+   	{  
+         "COD_FORMA_PAGO":"Contado"
+    },
+   	{  
+         "COD_FORMA_PAGO":"Credito",
+         "MONTO_FORMA_PAGO":"5"
+    },
+   	{  
+         "COD_FORMA_PAGO":"Cuota001",
+         "MONTO_FORMA_PAGO":"3",
+         "FECHA_FORMA_PAGO":"2016-12-04"
+    },
+   	{  
+         "COD_FORMA_PAGO":"Cuota002",
+         "MONTO_FORMA_PAGO":"2",
+         "FECHA_FORMA_PAGO":"2016-12-04"
+    }
+   ],
+   "txtNRO_DOCUMENTO_CLIENTE":"20424964990",
+   "txtRAZON_SOCIAL_CLIENTE":"CARVIMSA",
+   "txtTIPO_DOCUMENTO_CLIENTE":"6",
+   "txtDIRECCION_CLIENTE":"HUAMPANI ALTO",
+   "txtCIUDAD_CLIENTE":"LIMA",
+   "txtCOD_PAIS_CLIENTE":"PE",
+   "txtNRO_DOCUMENTO_EMPRESA":"10447915125",
+   "txtTIPO_DOCUMENTO_EMPRESA":"6",
+   "txtNOMBRE_COMERCIAL_EMPRESA":"JOSE LUIS ZAMBRANO YACHA",
+   "txtCODIGO_UBIGEO_EMPRESA":"150101",
+   "txtDIRECCION_EMPRESA":"DIRECCION DE PRUEBA",
+   "txtDEPARTAMENTO_EMPRESA":"LIMA",
+   "txtPROVINCIA_EMPRESA":"LIMA",
+   "txtDISTRITO_EMPRESA":"LIMA",
+   "txtCODIGO_PAIS_EMPRESA":"PE",
+   "txtRAZON_SOCIAL_EMPRESA":"JOSE LUIS ZAMBRANO YACHA",
+   "txtUSUARIO_SOL_EMPRESA":"MODDATOS",
+   "txtPASS_SOL_EMPRESA":"moddatos",
+   "txtPAS_FIRMA":"Asmoto2020",
+   "txtTIPO_PROCESO":"3",
+   "txtFLG_ANTICIPO":"0",
+   "txtFLG_REGU_ANTICIPO":"0",
+   "txtMONTO_REGU_ANTICIPO":"0",
+   "URL_OSE":"https://e-beta.sunat.gob.pe:443/ol-ti-itcpfegem-beta/billService",
+   "COD_OSE" : "0",
+   "detalle":[  
+      {  
+         "txtITEM":"1",
+         "txtUNIDAD_MEDIDA_DET":"NIU",
+         "txtCANTIDAD_DET":"5",
+         "txtPRECIO_DET":"0.10",
+         "txtIMPORTE_DET":"0.50",
+         "txtPRECIO_TIPO_CODIGO":"01",
+         "txtIGV":"0.09",
+         "txtISC":"0",
+         "txtCOD_TIPO_OPERACION":"10",
+         "txtCODIGO_DET":"00001",
+         "txtDESCRIPCION_DET":"PRODUCTO DE BOLSA",
+         "txtPRECIO_SIN_IGV_DET":"0.10",
+         "FLG_ICBPER" : "1",
+         "IMPUESTO_BP" : "0.10",
+         "IMPORTE_BP" : "0.5"
+      }
+   ]
+}

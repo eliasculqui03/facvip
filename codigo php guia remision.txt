@@ -1,0 +1,925 @@
+
+1) EN EL ARCHIVO cpe_envio COLOCAR LO SIGUIENTE
+
+function cpeEnvioGuiaRemisionToken($ruc, $usuario_sol, $pass_sol, $ruta_archivo, $ruta_archivo_cdr, $archivo, $cliente_id, $client_secret, $scope, $rutaWS_token, $rutaWS_ticket, $ruta_ws) {
+    try {
+        //=================ZIPEAR ================
+        $zip = new ZipArchive();
+        //$filenameXMLCPE = $ruta_archivo . '.ZIP';
+        $filenameXMLCPE = $ruta_archivo . '.zip';
+
+        if ($zip->open($filenameXMLCPE, ZIPARCHIVE::CREATE) === true) {
+            $zip->addFile($ruta_archivo . '.XML', $archivo . '.XML'); //ORIGEN, DESTINO
+            $zip->close();
+        }
+
+        //===================CONSULTA DE TOKEN GUIA REMISION=====================
+        $curl = curl_init();
+        /* PARA HACER PARAMETROS DE TIPO: x-w-form-urlencoded */
+        //https://www.pushsafer.com/en/pushapi
+        $dataToken = array(
+            'grant_type' => 'password',
+            'scope' => urldecode($scope), //urldecode("https://api-cpe.sunat.gob.pe/"),
+            'client_id' => urldecode($cliente_id),
+            'client_secret' => $client_secret,
+            'username' => $usuario_sol,
+            'password' => $pass_sol
+        );
+
+        $postString = http_build_query($dataToken, '', '&');
+
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $rutaWS_token,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => "",
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => "POST",
+            CURLOPT_POSTFIELDS => $postString,
+            CURLOPT_HTTPHEADER => array(
+                "content-type: application/x-www-form-urlencoded"
+            )
+        ));
+
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        curl_close($curl);
+
+        if ($err) {
+            $mensaje['cod_sunat'] = "0000";
+            $mensaje['msj_sunat'] = "ERROR TOKEN: " . $err;
+            $mensaje['hash_cdr'] = "";
+        } else {
+
+            $token = json_decode($response, true);
+            /* ================= */
+            $curl = curl_init();
+            curl_setopt_array($curl, array(
+                CURLOPT_URL => $ruta_ws,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING => "",
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => "POST",
+                CURLOPT_POSTFIELDS => '
+                {
+                    "archivo" : {
+                        "nomArchivo" : "' . $archivo . '.zip",
+                        "arcGreZip" : "' . base64_encode(file_get_contents($ruta_archivo . '.zip')) . '",
+                        "hashZip" : "' . hash_file('sha256', $ruta_archivo . '.zip') . '"
+                    }
+                }',
+                CURLOPT_HTTPHEADER => array(
+                    "authorization: Bearer " . $token['access_token'],
+                    "cache-control: no-cache",
+                    "content-type: application/json"
+                ),
+            ));
+
+            $response = curl_exec($curl);
+            $err = curl_error($curl);
+
+            curl_close($curl);
+
+            if ($err) {
+                $mensaje['cod_sunat'] = "0000";
+                $mensaje['msj_sunat'] = "ERROR AL ENVIAR COMPROBANTE: " . $err;
+                $mensaje['hash_cdr'] = "";
+            } else {
+                $rtaComprobante = json_decode($response, true);
+                $mensaje['cod_sunat'] = "0";
+                $mensaje['msj_sunat'] = $rtaComprobante['numTicket'];
+                $mensaje['hash_cdr'] = "";
+                //echo $response;
+            }
+        }
+    } catch (Exception $e) {
+        $mensaje['cod_sunat'] = "0000";
+        $mensaje['msj_sunat'] = "SUNAT ESTA FUERA SERVICIO: " . $e->getMessage();
+        $mensaje['hash_cdr'] = "";
+    }
+    //print_r($mensaje); 
+    return $mensaje;
+    //$xmlCDR = $doc->getElementsByTagName('applicationResponse')->item(0)->nodeValue;
+}
+
+function ConsultaTicketGuiaRemisionToken($ruc, $usuario_sol, $pass_sol, $ruta_archivo_cdr, $archivo, $cliente_id, $client_secret, $scope, $rutaWS_token, $rutaWS_ticket, $ticket) {
+    try {
+        //===================CONSULTA DE TOKEN GUIA REMISION=====================
+        $curl = curl_init();
+        /* PARA HACER PARAMETROS DE TIPO: x-w-form-urlencoded */
+        //https://www.pushsafer.com/en/pushapi
+        $dataToken = array(
+            'grant_type' => 'password',
+            'scope' => urldecode($scope), //urldecode("https://api-cpe.sunat.gob.pe/"),
+            'client_id' => urldecode($cliente_id),
+            'client_secret' => $client_secret,
+            'username' => $usuario_sol,
+            'password' => $pass_sol
+        );
+
+        $postString = http_build_query($dataToken, '', '&');
+
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $rutaWS_token,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => "",
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => "POST",
+            CURLOPT_POSTFIELDS => $postString,
+            CURLOPT_HTTPHEADER => array(
+                "content-type: application/x-www-form-urlencoded"
+            )
+        ));
+
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        curl_close($curl);
+
+        if ($err) {
+            $mensaje['cod_sunat'] = "0000";
+            $mensaje['msj_sunat'] = "ERROR TOKEN: " . $err;
+            $mensaje['hash_cdr'] = "";
+            $mensaje['ticket'] = $ticket;
+        } else {
+
+            $token = json_decode($response, true);
+            /* ================= */
+            $curl = curl_init();
+            curl_setopt_array($curl, array(
+                CURLOPT_URL => $rutaWS_ticket . $ticket, //ruta para consultar ticket
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING => "",
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => "GET",
+                CURLOPT_HTTPHEADER => array(
+                    "authorization: Bearer " . $token['access_token'],
+                    "cache-control: no-cache",
+                    "content-type: application/json"
+                ),
+            ));
+
+            $response = curl_exec($curl);
+            $err = curl_error($curl);
+
+            curl_close($curl);
+            
+            //echo $response;
+
+            if ($err) {
+                $mensaje['cod_sunat'] = "0000";
+                $mensaje['msj_sunat'] = "ERROR AL ENVIAR COMPROBANTE: " . $err;
+                $mensaje['hash_cdr'] = "";
+                $mensaje['ticket'] = $ticket;
+            } else {
+                $rtaComprobante = json_decode($response, true);
+
+                //respuesta de la sunat al consultar ticket
+                if ($rtaComprobante['codRespuesta'] == "0") {
+                    //generamos el CDR
+                    file_put_contents($ruta_archivo_cdr . 'R-' . $archivo . '.zip', base64_decode($rtaComprobante['arcCdr']));
+                    //extraemos archivo zip a xml
+                    
+                    $zip = new ZipArchive;
+                    if ($zip->open($ruta_archivo_cdr . 'R-' . $archivo . '.zip') === TRUE) {
+                        $zip->extractTo($ruta_archivo_cdr, 'R-' . $archivo . '.xml');
+                        $zip->close();
+                    }
+
+                    //=============hash CDR=================
+                    $doc_cdr = new DOMDocument();
+                    $doc_cdr->load(dirname(__FILE__) . '/' . $ruta_archivo_cdr . 'R-' . $archivo . '.xml');
+
+                    $mensaje['cod_sunat'] = $doc_cdr->getElementsByTagName('ResponseCode')->item(0)->nodeValue;
+                    $mensaje['msj_sunat'] = $doc_cdr->getElementsByTagName('Description')->item(0)->nodeValue;
+                    $mensaje['hash_cdr'] = $doc_cdr->getElementsByTagName('DigestValue')->item(0)->nodeValue;
+                    $mensaje['ticket'] = $ticket;
+                }
+                if ($rtaComprobante['codRespuesta'] == "98") {
+                    $mensaje['cod_sunat'] = $rtaComprobante['codRespuesta'];
+                    $mensaje['msj_sunat'] = "COMPROBANTE SE ENCUENTRA EN PROCESO";
+                    $mensaje['hash_cdr'] = "";
+                    $mensaje['ticket'] = $ticket;
+                }
+                if ($rtaComprobante['codRespuesta'] == "99") {
+                    $mensaje['cod_sunat'] = $rtaComprobante['error']['numError'];//$rtaComprobante['codRespuesta'];
+                    $mensaje['msj_sunat'] = $rtaComprobante['error']['numError'] . " - " . $rtaComprobante['error']['desError'];
+                    $mensaje['hash_cdr'] = "";
+                    $mensaje['ticket'] = $ticket;                    
+                }
+
+                //echo $response;
+            }
+        }
+    } catch (Exception $e) {
+        $mensaje['cod_sunat'] = "0000";
+        $mensaje['msj_sunat'] = "SUNAT ESTA FUERA SERVICIO: " . $e->getMessage();
+        $mensaje['hash_cdr'] = "";
+        $mensaje['ticket'] = $ticket;
+    }
+    //print_r($mensaje); 
+    return $mensaje;
+    //$xmlCDR = $doc->getElementsByTagName('applicationResponse')->item(0)->nodeValue;
+}
+
+2) AGREGAR EN EL ARCHIVO CPESunat_UBL21
+
+function cpeGuiaV2($ruta, $cabecera, $detalle) {
+    try {
+    $doc = new DOMDocument();
+    $doc->formatOutput = FALSE;
+    $doc->preserveWhiteSpace = TRUE;
+    $doc->encoding = 'ISO-8859-1';
+    $xmlCPE = "<?xml version='1.0' encoding='iso-8859-1'?>
+                    <DespatchAdvice
+                        xmlns:ds='http://www.w3.org/2000/09/xmldsig#'
+                        xmlns:cbc='urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2'
+                        xmlns:qdt='urn:oasis:names:specification:ubl:schema:xsd:QualifiedDatatypes-2'
+                        xmlns:ccts='urn:un:unece:uncefact:documentation:2'
+                        xmlns:xsd='http://www.w3.org/2001/XMLSchema'
+                        xmlns:udt='urn:un:unece:uncefact:data:specification:UnqualifiedDataTypesSchemaModule:2'
+                        xmlns:ext='urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2'
+                        xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
+                        xmlns:cac='urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2'
+                        xmlns:sac='urn:sunat:names:specification:ubl:peru:schema:xsd:SunatAggregateComponents-1'
+                        xmlns='urn:oasis:names:specification:ubl:schema:xsd:DespatchAdvice-2'>
+                        <ext:UBLExtensions>
+                            <ext:UBLExtension>
+                                <ext:ExtensionContent>
+                                </ext:ExtensionContent>
+                            </ext:UBLExtension>
+                        </ext:UBLExtensions>
+                        <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
+                        <cbc:CustomizationID>2.0</cbc:CustomizationID>
+                        <cbc:ID>" . $cabecera["NRO_COMPROBANTE"] . "</cbc:ID>
+                        <cbc:IssueDate>" . $cabecera["FECHA_DOCUMENTO"] . "</cbc:IssueDate>
+                        <cbc:IssueTime>".date("H:i:s")."</cbc:IssueTime>
+                        <cbc:DespatchAdviceTypeCode>" . $cabecera["COD_TIPO_DOCUMENTO"] . "</cbc:DespatchAdviceTypeCode>
+                        <cbc:Note><![CDATA[" . $cabecera["NOTA"] . "]]></cbc:Note>";
+
+            if($cabecera["NRO_DOCUMENTO_REFERENCIA"] != "") {
+                $xmlCPE = $xmlCPE . "<cac:AdditionalDocumentReference>
+                            <cbc:ID>" . $cabecera["COD_DOCUMENTO_RELACIODO"] . "</cbc:ID>
+                            <cbc:DocumentTypeCode>" . $cabecera["NRO_DOCUMENTO_REFERENCIA"] . "</cbc:DocumentTypeCode>                            
+                         </cac:AdditionalDocumentReference>";
+            }
+
+            if ($cabecera["FLG_ANULADO"] == "1" ){
+               $xmlCPE = $xmlCPE . "<cac:OrderReference>
+                            <cbc:ID>" . $cabecera["DOC_REFERENCIA_ANU"] . "</cbc:ID>
+                            <cbc:OrderTypeCode>" . $cabecera["COD_TIPO_DOC_REFANU"] . "</cbc:OrderTypeCode>
+                            </cac:OrderReference>";
+            }
+
+            $xmlCPE = $xmlCPE . "<cac:Signature>
+		                    <cbc:ID>" . $cabecera["NRO_COMPROBANTE"] . "</cbc:ID>
+		                    <cac:SignatoryParty>
+			                    <cac:PartyIdentification>
+				                    <cbc:ID>" . $cabecera["NRO_DOCUMENTO_EMPRESA"] . "</cbc:ID>
+			                    </cac:PartyIdentification>
+			                    <cac:PartyName>
+				                    <cbc:Name><![CDATA[" . $cabecera["RAZON_SOCIAL_EMPRESA"] . "]]></cbc:Name>
+			                    </cac:PartyName>
+		                    </cac:SignatoryParty>
+		                    <cac:DigitalSignatureAttachment>
+			                    <cac:ExternalReference>
+				                    <cbc:URI>#" . $cabecera["NRO_COMPROBANTE"] . "</cbc:URI>
+			                    </cac:ExternalReference>
+		                    </cac:DigitalSignatureAttachment>
+	                    </cac:Signature>";
+
+$xmlCPE = $xmlCPE . "<cac:DespatchSupplierParty>
+                        <cac:Party>
+                           <cac:PartyIdentification>
+                              <cbc:ID schemeID='" . $cabecera["TIPO_DOCUMENTO_EMPRESA"] . "'>" . $cabecera["NRO_DOCUMENTO_EMPRESA"] . "</cbc:ID>
+                           </cac:PartyIdentification>
+                           <cac:PartyName>
+                              <cbc:Name><![CDATA[" . $cabecera["RAZON_SOCIAL_EMPRESA"] . "]]></cbc:Name>
+                           </cac:PartyName>
+                           <cac:PartyLegalEntity>
+                              <cbc:RegistrationName><![CDATA[" . $cabecera["RAZON_SOCIAL_EMPRESA"] . "]]></cbc:RegistrationName>
+                           </cac:PartyLegalEntity>
+                        </cac:Party>
+                     </cac:DespatchSupplierParty>				      
+                     <cac:DeliveryCustomerParty>
+                            <cac:Party>
+                               <cac:PartyIdentification>
+                                  <cbc:ID schemeID='" . $cabecera["TIPO_DOCUMENTO_CLIENTE"] . "'>" . $cabecera["NRO_DOCUMENTO_CLIENTE"] . "</cbc:ID>
+                               </cac:PartyIdentification>
+                               <cac:PartyLegalEntity>
+                                  <cbc:RegistrationName><![CDATA[" . $cabecera["RAZON_SOCIAL_CLIENTE"] . "]]></cbc:RegistrationName>
+                               </cac:PartyLegalEntity>
+                            </cac:Party>
+                        </cac:DeliveryCustomerParty>
+                        <cac:Shipment>
+                            <cbc:ID>" . $cabecera["ITEM_ENVIO"] . "</cbc:ID>
+                            <cbc:HandlingCode>" . $cabecera["COD_MOTIVO_TRASLADO"] . "</cbc:HandlingCode>";
+            
+                    if ($cabecera["COD_MOTIVO_TRASLADO"] == "08"||$cabecera["COD_MOTIVO_TRASLADO"] == "09"){
+                        $xmlCPE = $xmlCPE . "<cbc:Information>" . $cabecera["DESCRIPCION_MOTIVO_TRASLADO"] . "</cbc:Information>";
+                    }            
+                            
+                       $xmlCPE = $xmlCPE . "<cbc:GrossWeightMeasure unitCode='" . $cabecera["COD_UND_PESO_BRUTO"] . "'>" . $cabecera["PESO_BRUTO"] . "</cbc:GrossWeightMeasure>
+                            <cbc:TotalTransportHandlingUnitQuantity>" . $cabecera["TOTAL_BULTOS"] . "</cbc:TotalTransportHandlingUnitQuantity>";
+                      
+                        if ($cabecera["COD_MODALIDAD_TRASLADO"] == "02") {//01=publico, 02=privado
+                            $xmlCPE = $xmlCPE . "    <cbc:SpecialInstructions>L1</cbc:SpecialInstructions>\n";
+                        }
+
+                        $xmlCPE = $xmlCPE . "<cac:ShipmentStage>
+                                <cbc:TransportModeCode>" . $cabecera["COD_MODALIDAD_TRASLADO"] . "</cbc:TransportModeCode>
+                                <cac:TransitPeriod>
+                                    <cbc:StartDate>" . $cabecera["FECHA_INICIO"] . "</cbc:StartDate>
+                                </cac:TransitPeriod>";
+                   
+                        if ($cabecera["COD_MODALIDAD_TRASLADO"] == "01"){
+                            $xmlCPE = $xmlCPE . "<cac:CarrierParty>
+                                        <cac:PartyIdentification>
+                                            <cbc:ID schemeID='" . $cabecera["TIPO_DOCUMENTO_TRANSPORTISTA"] . "'>" . $cabecera["NRO_DOCUMENTO_TRANSPORTISTA"] . "</cbc:ID>
+                                        </cac:PartyIdentification>
+                                        <cac:PartyLegalEntity>
+                                            <cbc:RegistrationName>
+                                                <![CDATA[" . $cabecera["RAZON_SOCIAL_TRANSPORTISTA"] . "]]>
+                                            </cbc:RegistrationName>
+                                        </cac:PartyLegalEntity>
+                                    </cac:CarrierParty>";
+                        }
+
+                    if ($cabecera["COD_MODALIDAD_TRASLADO"] != "01"){
+     $xmlCPE = $xmlCPE . "<cac:TransportMeans>
+                                <cac:RoadTransport>
+                                    <cbc:LicensePlateID>" . $cabecera["PLACA_VEHICULO"] . "</cbc:LicensePlateID>
+                                </cac:RoadTransport>
+                            </cac:TransportMeans>                            
+                            <cac:DriverPerson>
+                                <cbc:ID schemeID='" . $cabecera["COD_TIPO_DOC_CHOFER"] . "'>"  . $cabecera["NRO_DOC_CHOFER"] . "</cbc:ID>
+                                <cbc:FirstName>" . $cabecera["NOMBRES_CHOFER"] . "</cbc:FirstName>
+				<cbc:FamilyName>" . $cabecera["APELLIDOS_CHOFER"] . "</cbc:FamilyName>
+                                <cbc:JobTitle>Principal</cbc:JobTitle>
+                                <cac:IdentityDocumentReference>
+                                        <cbc:ID>" . $cabecera["LIC_CONDUCIR_CHOFER"] . "</cbc:ID>
+				</cac:IdentityDocumentReference>
+                            </cac:DriverPerson>";                            
+                    }
+                        
+         $xmlCPE = $xmlCPE . "</cac:ShipmentStage>
+                   <cac:Delivery>
+                    <cac:DeliveryAddress>
+                       <cbc:ID>" . $cabecera["COD_UBIGEO_DESTINO"] . "</cbc:ID>";
+         
+                    if ($cabecera["COD_MOTIVO_TRASLADO"] == "04"){             
+                      $xmlCPE = $xmlCPE . "<cbc:AddressTypeCode listID='" . $cabecera["NRO_DOCUMENTO_CLIENTE"] . "'>0000</cbc:AddressTypeCode>";
+                    }
+              
+                       $xmlCPE = $xmlCPE . "<cac:AddressLine>
+                          <cbc:Line>" . $cabecera["DIRECCION_DESTINO"] . "</cbc:Line>
+                       </cac:AddressLine>
+                    </cac:DeliveryAddress>                    
+                    <cac:Despatch>
+                        <cac:DespatchAddress>
+                          <cbc:ID>" . $cabecera["COD_UBIGEO_ORIGEN"] . "</cbc:ID>";
+         
+                    if ($cabecera["COD_MOTIVO_TRASLADO"] == "04"){             
+                              $xmlCPE = $xmlCPE . "<cbc:AddressTypeCode listID='" . $cabecera["NRO_DOCUMENTO_EMPRESA"] . "'>0000</cbc:AddressTypeCode>";
+                    }
+              
+                       $xmlCPE = $xmlCPE . "<cac:AddressLine>
+                             <cbc:Line>" . $cabecera["DIRECCION_ORIGEN"] . "</cbc:Line>
+                          </cac:AddressLine>
+                       </cac:DespatchAddress> 
+                       </cac:Despatch>                    
+                 </cac:Delivery>";
+               
+               if ($cabecera["COD_MODALIDAD_TRASLADO"] != "01"){
+                  $xmlCPE = $xmlCPE . " 
+                 <cac:TransportHandlingUnit>
+                                       <cac:TransportEquipment>
+                                        <cbc:ID>" . $cabecera["PLACA_VEHICULO"] . "</cbc:ID>
+                                       </cac:TransportEquipment>
+                                       </cac:TransportHandlingUnit>";
+                }                           
+
+            $xmlCPE = $xmlCPE . "</cac:Shipment>";
+
+            for ($i = 0; $i < count($detalle); $i++) {
+                $xmlCPE = $xmlCPE . "<cac:DespatchLine>
+                                        <cbc:ID>" . $detalle[$i]["ITEM"] .  "</cbc:ID>
+                                        <cbc:DeliveredQuantity unitCode='". $detalle[$i]["UNIDAD_MEDIDA"] . "'>". $detalle[$i]["CANTIDAD"] . "</cbc:DeliveredQuantity>
+                                        <cac:OrderLineReference>
+                                            <cbc:LineID>" . $detalle[$i]["ORDER_ITEM"] . "</cbc:LineID>
+                                        </cac:OrderLineReference>
+                                        <cac:Item>
+                                            <cbc:Description>
+                                                <![CDATA[" . $detalle[$i]["DESCRIPCION"] . "]]>
+                                            </cbc:Description>
+                                            <cac:SellersItemIdentification>
+                                                <cbc:ID>" . $detalle[$i]["CODIGO"] . "</cbc:ID>
+                                            </cac:SellersItemIdentification>
+                                        </cac:Item>
+                                    </cac:DespatchLine>";
+            }
+
+            $xmlCPE = $xmlCPE . "</DespatchAdvice>";
+
+    $doc->loadXML($xmlCPE);
+    $doc->save(dirname(__FILE__) . '/' . $ruta . '.XML');
+    } catch (Exception $e) {
+        //$nombre_archivo = "logs.txt";
+        echo 'Excepción capturada: ', $e->getMessage(), "\n";
+        $mensaje = $e->getMessage();
+        $file = fopen("logs_guia.txt", "w");
+        fwrite($file, $mensaje . PHP_EOL);
+        fwrite($file, "Otra más" . PHP_EOL);
+        fclose($file);
+    }
+    return '1';
+}
+
+/**
+ *
+ * 
+FALTARIA EL REMITENTE QUE EMPRESA SE LE ESTA EMITIENDO LA GUIA
+ * 
+ * 
+ */
+function cpeGuiaTransportistaV2($ruta, $cabecera, $detalle) {
+    try {
+    $doc = new DOMDocument();
+    $doc->formatOutput = FALSE;
+    $doc->preserveWhiteSpace = TRUE;
+    $doc->encoding = 'ISO-8859-1';
+    $xmlCPE = "<?xml version='1.0' encoding='iso-8859-1'?>
+                    <DespatchAdvice
+                        xmlns:ds='http://www.w3.org/2000/09/xmldsig#'
+                        xmlns:cbc='urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2'
+                        xmlns:qdt='urn:oasis:names:specification:ubl:schema:xsd:QualifiedDatatypes-2'
+                        xmlns:ccts='urn:un:unece:uncefact:documentation:2'
+                        xmlns:xsd='http://www.w3.org/2001/XMLSchema'
+                        xmlns:udt='urn:un:unece:uncefact:data:specification:UnqualifiedDataTypesSchemaModule:2'
+                        xmlns:ext='urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2'
+                        xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
+                        xmlns:cac='urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2'
+                        xmlns:sac='urn:sunat:names:specification:ubl:peru:schema:xsd:SunatAggregateComponents-1'
+                        xmlns='urn:oasis:names:specification:ubl:schema:xsd:DespatchAdvice-2'>
+                        <ext:UBLExtensions>
+                            <ext:UBLExtension>
+                                <ext:ExtensionContent>
+                                </ext:ExtensionContent>
+                            </ext:UBLExtension>
+                        </ext:UBLExtensions>
+                        <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
+                        <cbc:CustomizationID>2.0</cbc:CustomizationID>
+                        <cbc:ID>" . $cabecera["NRO_COMPROBANTE"] . "</cbc:ID>
+                        <cbc:IssueDate>" . $cabecera["FECHA_DOCUMENTO"] . "</cbc:IssueDate>
+                        <cbc:IssueTime>".date("H:i:s")."</cbc:IssueTime>
+                        <cbc:DespatchAdviceTypeCode>" . $cabecera["COD_TIPO_DOCUMENTO"] . "</cbc:DespatchAdviceTypeCode>
+                        <cbc:Note><![CDATA[" . $cabecera["NOTA"] . "]]></cbc:Note>";
+
+            if($cabecera["NRO_DOCUMENTO_REFERENCIA"] != "") {
+                $xmlCPE = $xmlCPE . "<cac:AdditionalDocumentReference>
+                            <cbc:ID>" . $cabecera["COD_DOCUMENTO_RELACIODO"] . "</cbc:ID>
+                            <cbc:DocumentTypeCode>" . $cabecera["NRO_DOCUMENTO_REFERENCIA"] . "</cbc:DocumentTypeCode>                            
+                         </cac:AdditionalDocumentReference>";
+            }
+
+            if ($cabecera["FLG_ANULADO"] == "1" ){
+               $xmlCPE = $xmlCPE . "<cac:OrderReference>
+                            <cbc:ID>" . $cabecera["DOC_REFERENCIA_ANU"] . "</cbc:ID>
+                            <cbc:OrderTypeCode>" . $cabecera["COD_TIPO_DOC_REFANU"] . "</cbc:OrderTypeCode>
+                            </cac:OrderReference>";
+            }
+
+            $xmlCPE = $xmlCPE . "<cac:Signature>
+		                    <cbc:ID>" . $cabecera["NRO_COMPROBANTE"] . "</cbc:ID>
+		                    <cac:SignatoryParty>
+			                    <cac:PartyIdentification>
+				                    <cbc:ID>" . $cabecera["NRO_DOCUMENTO_EMPRESA"] . "</cbc:ID>
+			                    </cac:PartyIdentification>
+			                    <cac:PartyName>
+				                    <cbc:Name><![CDATA[" . $cabecera["RAZON_SOCIAL_EMPRESA"] . "]]></cbc:Name>
+			                    </cac:PartyName>
+		                    </cac:SignatoryParty>
+		                    <cac:DigitalSignatureAttachment>
+			                    <cac:ExternalReference>
+				                    <cbc:URI>#" . $cabecera["NRO_COMPROBANTE"] . "</cbc:URI>
+			                    </cac:ExternalReference>
+		                    </cac:DigitalSignatureAttachment>
+	                    </cac:Signature>";
+
+$xmlCPE = $xmlCPE . "<cac:DespatchSupplierParty>
+                        <cac:Party>
+                           <cac:PartyIdentification>
+                              <cbc:ID schemeID='" . $cabecera["TIPO_DOCUMENTO_EMPRESA"] . "'>" . $cabecera["NRO_DOCUMENTO_EMPRESA"] . "</cbc:ID>
+                           </cac:PartyIdentification>
+                           <cac:PartyName>
+                              <cbc:Name><![CDATA[" . $cabecera["RAZON_SOCIAL_EMPRESA"] . "]]></cbc:Name>
+                           </cac:PartyName>
+                           <cac:PartyLegalEntity>
+                              <cbc:RegistrationName><![CDATA[" . $cabecera["RAZON_SOCIAL_EMPRESA"] . "]]></cbc:RegistrationName>
+                           </cac:PartyLegalEntity>
+                        </cac:Party>
+                     </cac:DespatchSupplierParty>					 
+                     <cac:DeliveryCustomerParty>
+                            <cac:Party>
+                               <cac:PartyIdentification>
+                                  <cbc:ID schemeID='" . $cabecera["TIPO_DOCUMENTO_CLIENTE"] . "'>" . $cabecera["NRO_DOCUMENTO_CLIENTE"] . "</cbc:ID>
+                               </cac:PartyIdentification>
+                               <cac:PartyLegalEntity>
+                                  <cbc:RegistrationName><![CDATA[" . $cabecera["RAZON_SOCIAL_CLIENTE"] . "]]></cbc:RegistrationName>
+                               </cac:PartyLegalEntity>
+                            </cac:Party>
+                        </cac:DeliveryCustomerParty>
+                        <cac:Shipment>
+                            <cbc:ID>" . $cabecera["ITEM_ENVIO"] . "</cbc:ID>
+                            <cbc:HandlingCode>" . $cabecera["COD_MOTIVO_TRASLADO"] . "</cbc:HandlingCode>";
+            
+                    if ($cabecera["COD_MOTIVO_TRASLADO"] == "08"||$cabecera["COD_MOTIVO_TRASLADO"] == "09"){
+                        $xmlCPE = $xmlCPE . "<cbc:Information>" . $cabecera["DESCRIPCION_MOTIVO_TRASLADO"] . "</cbc:Information>";
+                    }            
+                            
+                       $xmlCPE = $xmlCPE . "<cbc:GrossWeightMeasure unitCode='" . $cabecera["COD_UND_PESO_BRUTO"] . "'>" . $cabecera["PESO_BRUTO"] . "</cbc:GrossWeightMeasure>
+                            <cbc:TotalTransportHandlingUnitQuantity>" . $cabecera["TOTAL_BULTOS"] . "</cbc:TotalTransportHandlingUnitQuantity>";
+                      
+                        if ($cabecera["COD_MODALIDAD_TRASLADO"] == "02") {//01=publico, 02=privado
+                            $xmlCPE = $xmlCPE . "    <cbc:SpecialInstructions>L1</cbc:SpecialInstructions>\n";
+                        }
+
+                       $xmlCPE = $xmlCPE . "<cac:ShipmentStage>
+                                <cbc:TransportModeCode>" . $cabecera["COD_MODALIDAD_TRASLADO"] . "</cbc:TransportModeCode>
+                                <cac:TransitPeriod>
+                                    <cbc:StartDate>" . $cabecera["FECHA_INICIO"] . "</cbc:StartDate>
+                                </cac:TransitPeriod>";
+                   /*
+                        if ($cabecera["COD_MODALIDAD_TRASLADO"] == "01"){
+                            $xmlCPE = $xmlCPE . "<cac:CarrierParty>
+                                        <cac:PartyIdentification>
+                                            <cbc:ID schemeID='" . $cabecera["TIPO_DOCUMENTO_TRANSPORTISTA"] . "'>" . $cabecera["NRO_DOCUMENTO_TRANSPORTISTA"] . "</cbc:ID>
+                                        </cac:PartyIdentification>
+                                        <cac:PartyLegalEntity>
+                                            <cbc:RegistrationName>
+                                                <![CDATA[" . $cabecera["RAZON_SOCIAL_TRANSPORTISTA"] . "]]>
+                                            </cbc:RegistrationName>
+                                        </cac:PartyLegalEntity>
+                                    </cac:CarrierParty>";
+                        }*/
+
+                    //if ($cabecera["COD_MODALIDAD_TRASLADO"] != "01"){
+     $xmlCPE = $xmlCPE . "<cac:TransportMeans>
+                                <cac:RoadTransport>
+                                    <cbc:LicensePlateID>" . $cabecera["PLACA_VEHICULO"] . "</cbc:LicensePlateID>
+                                </cac:RoadTransport>
+                            </cac:TransportMeans>                            
+                            <cac:DriverPerson>
+                                <cbc:ID schemeID='" . $cabecera["COD_TIPO_DOC_CHOFER"] . "'>"  . $cabecera["NRO_DOC_CHOFER"] . "</cbc:ID>
+                                <cbc:FirstName>" . $cabecera["NOMBRES_CHOFER"] . "</cbc:FirstName>
+				<cbc:FamilyName>" . $cabecera["APELLIDOS_CHOFER"] . "</cbc:FamilyName>
+                                <cbc:JobTitle>Principal</cbc:JobTitle>
+                                <cac:IdentityDocumentReference>
+                                        <cbc:ID>" . $cabecera["LIC_CONDUCIR_CHOFER"] . "</cbc:ID>
+				</cac:IdentityDocumentReference>
+                            </cac:DriverPerson>";                            
+                       // }
+                        
+         $xmlCPE = $xmlCPE . "</cac:ShipmentStage>
+                        
+                    <cac:Delivery>
+                    <cac:DeliveryAddress>
+                       <cbc:ID>" . $cabecera["COD_UBIGEO_DESTINO"] . "</cbc:ID>
+                       <cac:AddressLine>
+                          <cbc:Line>" . $cabecera["DIRECCION_DESTINO"] . "</cbc:Line>
+                       </cac:AddressLine>
+                    </cac:DeliveryAddress>                    
+                    <cac:Despatch>
+                        <cac:DespatchAddress>
+                                <cbc:ID>" . $cabecera["COD_UBIGEO_ORIGEN"] . "</cbc:ID>
+                                <cac:AddressLine>
+                                    <cbc:Line>" . $cabecera["DIRECCION_ORIGEN"] . "</cbc:Line>
+                                </cac:AddressLine>
+                        </cac:DespatchAddress>
+                        <cac:DespatchParty>
+                            <cac:PartyIdentification>
+                                <cbc:ID schemeID='" . $cabecera["TIPO_DOCUMENTO_REMITENTE"] . "'>" . $cabecera["NRO_DOCUMENTO_REMITENTE"] . "</cbc:ID>
+                            </cac:PartyIdentification>
+                            <cac:PartyLegalEntity>
+                                <cbc:RegistrationName>
+                                    <![CDATA[" . $cabecera["RAZON_SOCIAL_REMITENTE"] . "]]>
+                                </cbc:RegistrationName>    
+                            </cac:PartyLegalEntity>                           
+                        </cac:DespatchParty> 
+                    </cac:Despatch>                    
+                 </cac:Delivery>";
+               
+               //if ($cabecera["COD_MODALIDAD_TRASLADO"] != "01"){
+                  $xmlCPE = $xmlCPE . " 
+                 <cac:TransportHandlingUnit>
+                                       <cac:TransportEquipment>
+                                        <cbc:ID>" . $cabecera["PLACA_VEHICULO"] . "</cbc:ID>
+                                       </cac:TransportEquipment>
+                                       </cac:TransportHandlingUnit>";
+               // }                           
+
+            $xmlCPE = $xmlCPE . "</cac:Shipment>";
+
+            for ($i = 0; $i < count($detalle); $i++) {
+                $xmlCPE = $xmlCPE . "<cac:DespatchLine>
+                                        <cbc:ID>" . $detalle[$i]["ITEM"] .  "</cbc:ID>
+                                        <cbc:DeliveredQuantity unitCode='". $detalle[$i]["UNIDAD_MEDIDA"] . "'>". $detalle[$i]["CANTIDAD"] . "</cbc:DeliveredQuantity>
+                                        <cac:OrderLineReference>
+                                            <cbc:LineID>" . $detalle[$i]["ORDER_ITEM"] . "</cbc:LineID>
+                                        </cac:OrderLineReference>
+                                        <cac:Item>
+                                            <cbc:Description>
+                                                <![CDATA[" . $detalle[$i]["DESCRIPCION"] . "]]>
+                                            </cbc:Description>
+                                            <cac:SellersItemIdentification>
+                                                <cbc:ID>" . $detalle[$i]["CODIGO"] . "</cbc:ID>
+                                            </cac:SellersItemIdentification>
+                                        </cac:Item>
+                                    </cac:DespatchLine>";
+            }
+
+            $xmlCPE = $xmlCPE . "</DespatchAdvice>";
+
+    $doc->loadXML($xmlCPE);
+    $doc->save(dirname(__FILE__) . '/' . $ruta . '.XML');
+    } catch (Exception $e) {
+        //$nombre_archivo = "logs.txt";
+        echo 'Excepción capturada: ', $e->getMessage(), "\n";
+        $mensaje = $e->getMessage();
+        $file = fopen("logs_guia.txt", "w");
+        fwrite($file, $mensaje . PHP_EOL);
+        fwrite($file, "Otra más" . PHP_EOL);
+        fclose($file);
+    }
+    return '1';
+}
+
+3) EN EL ARCHIVO config_cpe DE LA CARPETA CONTROLLER
+
+function guiaremisionToken($tipo_proceso, $ruc, $usuario_sol, $pass_sol, $pass_firma, $cab, $detalle) {
+    //===============mensajes==============
+    $mensaje_xml = "";
+    $hash_cpe = ""; //hash_cpe
+    $hash_cdr = "";
+    //========================variables=======================
+    $ruta_archivo = '../api_cpe/';
+    $archivo = $ruc . '-' . $cab['COD_TIPO_DOCUMENTO'] . '-' . $cab['NRO_COMPROBANTE'];
+    //VARIABLES PARA TOKEN
+    $cliente_id = $cab['ID_TOKEN'];
+    $client_secret = $cab['CLAVE_TOKEN'];
+    //FIN VARIABLES PARA TOKEN
+    $ruta = '';
+    $ruta_cdr = '';
+    $ruta_firma = '';
+    //rutas guita remision con token
+    $rutaWS_token = '';
+    $rutaWS_ticket = '';
+    $ruta_ws = '';
+    $scope = '';
+
+    //========================configuracion de(SERVIDOR)=======================
+    if ($tipo_proceso == '1' || $tipo_proceso == '3') {
+        $ruta = $ruta_archivo . 'PRODUCCION/' . $ruc . "/" . $archivo;
+        $ruta_cdr = $ruta_archivo . 'PRODUCCION/' . $ruc . "/";
+        $ruta_firma = $ruta_archivo . 'FIRMA/' . $ruc . '.pfx';
+        //rutas guita remision con token
+        $scope = "https://api-cpe.sunat.gob.pe/";
+        $rutaWS_token = "https://api-seguridad.sunat.gob.pe/v1/clientessol/" . $cliente_id . "/oauth2/token/"; //"https://api-seguridad.sunat.gob.pe/v1/clientessol/".urldecode($cliente_id)."/oauth2/token/";
+        $rutaWS_ticket = "https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/envios/";
+        $ruta_ws = "https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/" . $archivo;
+    }
+    //=======================creacion: factura, firma, envio======================
+    $flg_firma = "0";
+    if ($cab['COD_TIPO_DOCUMENTO'] == '09') {
+        $mensaje_xml = cpeGuiaV2($ruta, $cab, $detalle);
+        $flg_firma = "0";
+    }
+
+    if ($cab['COD_TIPO_DOCUMENTO'] == '31') {
+        $mensaje_xml = cpeGuiaTransportistaV2($ruta, $cab, $detalle);
+        $flg_firma = "0";
+    }
+
+    $hash_cpe = Signature($flg_firma, $ruta, $ruta_firma, $pass_firma);
+    $mensaje_envio = cpeEnvioGuiaRemisionToken($ruc, $usuario_sol, $pass_sol, $ruta, $ruta_cdr, $archivo, $cliente_id, $client_secret, $scope, $rutaWS_token, $rutaWS_ticket, $ruta_ws);
+
+    $response['mensaje_xml'] = $mensaje_xml;
+    $response['hash_cpe'] = $hash_cpe;
+    $response['hash_cdr'] = $mensaje_envio;
+
+    return $response;
+}
+
+//function TicketGuiaRemisionToken($tipo_proceso, $ruc, $usuario_sol, $pass_sol, $pass_firma, $cab, $detalle) {
+function TicketGuiaRemisionToken($cab) {
+    //===============mensajes==============
+    $mensaje_xml = "";
+    $hash_cdr = "";
+    //========================variables=======================
+    $ruta_archivo = '../api_cpe/';
+    $archivo = $cab['NRO_DOCUMENTO_EMPRESA'] . '-' . $cab['COD_TIPO_DOCUMENTO'] . '-' . $cab['NRO_COMPROBANTE'];
+    //VARIABLES PARA TOKEN
+    $cliente_id = $cab['ID_TOKEN'];
+    $client_secret = $cab['CLAVE_TOKEN'];
+    //FIN VARIABLES PARA TOKEN
+    $ruta_cdr = '';
+    //rutas guita remision con token
+    $rutaWS_token = '';
+    $rutaWS_ticket = '';
+    $scope = '';
+
+    //========================configuracion de(SERVIDOR)=======================
+    if ($cab['TIPO_PROCESO'] == '1' || $cab['TIPO_PROCESO'] == '3') {
+        $ruta_cdr = $ruta_archivo . 'PRODUCCION/' . $cab['NRO_DOCUMENTO_EMPRESA'] . "/";
+        //rutas guita remision con token
+        $scope = "https://api-cpe.sunat.gob.pe/";
+        $rutaWS_token = "https://api-seguridad.sunat.gob.pe/v1/clientessol/" . $cliente_id . "/oauth2/token/";
+        $rutaWS_ticket = "https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/envios/";
+    }
+
+    $mensaje_envio = ConsultaTicketGuiaRemisionToken($cab['NRO_DOCUMENTO_EMPRESA'], $cab['USUARIO_SOL_EMPRESA'], $cab['PASS_SOL_EMPRESA'], $ruta_cdr, $archivo, $cliente_id, $client_secret, $scope, $rutaWS_token, $rutaWS_ticket, $cab['TICKET']);
+
+    $response['mensaje_xml'] = "";
+    $response['hash_cpe'] = "";
+    $response['hash_cdr'] = $mensaje_envio;
+
+    return $response;
+}
+
+4) EN LA CARPETA CONTROLLER REMPLZAR TODO EL CODIGO DEL AERCHIVO controller_cpe_guia
+
+<?php
+
+error_reporting(E_ALL ^ E_NOTICE);
+// Permite la conexion desde cualquier origen
+header("Access-Control-Allow-Origin: *");
+// Permite la ejecucion de los metodos
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE");
+// Se incluye el archivo que contiene la clase generica
+require_once('config_cpe.php');
+require_once('../funcionesGlobales/validaciones.php');
+
+//$array = explode("/", $_SERVER['REQUEST_URI']);
+$bodyRequest = file_get_contents("php://input");
+
+// Decodifica el cuerpo de la solicitud y lo guarda en un array de PHP
+$cab = json_decode($bodyRequest, true);
+$detalle = $cab['detalle'];
+
+
+//$mensaje_cpe = guiaremision($cab['TIPO_PROCESO'], $cab['NRO_DOCUMENTO_EMPRESA'], $cab['USUARIO_SOL_EMPRESA'], $cab['PASS_SOL_EMPRESA'], "123456", $cab, $detalle);
+$mensaje_cpe = guiaremisionToken($cab['TIPO_PROCESO'], $cab['NRO_DOCUMENTO_EMPRESA'], $cab['USUARIO_SOL_EMPRESA'], $cab['PASS_SOL_EMPRESA'], "123456", $cab, $detalle);
+
+$resultado['hash_cpe'] = $mensaje_cpe['hash_cpe'];
+$resultado['cod_sunat'] = $mensaje_cpe['hash_cdr']['cod_sunat'];//str_replace("SOAP-ENV:CLIENT.", "", $mensaje_cpe['hash_cdr']['cod_sunat']);
+$resultado['msj_sunat'] = str_replace("'","",$mensaje_cpe['hash_cdr']['msj_sunat']);
+$resultado['hash_cdr'] = $mensaje_cpe['hash_cdr']['hash_cdr'];
+
+print_json($resultado);
+//print_json($mensaje_cpe);
+
+function print_json($data) {
+    header("HTTP/1.1");
+    header("Content-Type: application/json; charset=UTF-8");
+    echo json_encode($data, JSON_PRETTY_PRINT);
+}
+
+?>
+
+5) EN LA CARPETA CONTROLLER AGREGAR UN ARCHIVO controller_cpe_ticket_gr.php. COPIAR LO SIGUIENTE
+
+<?php
+
+error_reporting(E_ALL ^ E_NOTICE);
+// Permite la conexion desde cualquier origen
+header("Access-Control-Allow-Origin: *");
+// Permite la ejecucion de los metodos
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE");
+// Se incluye el archivo que contiene la clase generica
+require_once('config_cpe.php');
+require_once('../funcionesGlobales/validaciones.php');
+
+//$array = explode("/", $_SERVER['REQUEST_URI']);
+$bodyRequest = file_get_contents("php://input");
+
+//$jsonData = $bodyRequest;
+
+$jsonData = json_decode($bodyRequest, true);
+
+$mensaje_cpe = TicketGuiaRemisionToken($jsonData);
+
+$resultado['hash_cpe'] = $mensaje_cpe['hash_cpe'];
+$resultado['cod_sunat'] = $mensaje_cpe['hash_cdr']['cod_sunat'];//str_replace("SOAP-ENV:CLIENT.", "", $mensaje_cpe['hash_cdr']['cod_sunat']);
+$resultado['msj_sunat'] = str_replace("'","",$mensaje_cpe['hash_cdr']['msj_sunat']);
+$resultado['hash_cdr'] = $mensaje_cpe['hash_cdr']['hash_cdr'];
+$resultado['ticket'] = $mensaje_cpe['hash_cdr']['ticket'];
+
+print_json($resultado);
+//print_json($jsonData);
+
+function print_json($data) {
+    header("HTTP/1.1");
+    header("Content-Type: application/json; charset=UTF-8");
+    echo json_encode($data, JSON_PRETTY_PRINT);
+}
+
+?>
+
+6) PARA FINALIZAR EL JSON QUE SE ENVIARA EN CASO DESEAS CONSUMIR EL ARCHIVO:
+
+http://localhost/sunat/facElectronicaUBL21/controller/controller_cpe_guia.php
+GUIA REMISION TOKEN:
+TIPO: POST
+ENVIO:
+{
+	"NRO_COMPROBANTE":"T001-0003000",
+        "FECHA_DOCUMENTO" : "2019-12-27",
+        "COD_TIPO_DOCUMENTO":"09",
+        "NOTA":"ESTO ES UNA GUIA DE REMISION",
+        "ITEM_ENVIO" : "1",
+        "COD_MOTIVO_TRASLADO":"01",
+        "DESCRIPCION_MOTIVO_TRASLADO":"VENTA",
+        "COD_UND_PESO_BRUTO":"KGM",
+        "PESO_BRUTO" : "1000.0",
+        "TOTAL_BULTOS" : "2",
+        "COD_MODALIDAD_TRASLADO":"02",
+        "FECHA_INICIO":"2019-12-27",
+        "NRO_DOCUMENTO_TRANSPORTISTA":"20100066603",
+        "RAZON_SOCIAL_TRANSPORTISTA":"CREVPERU SA",
+        "TIPO_DOCUMENTO_TRANSPORTISTA":"6",
+        "PLACA_VEHICULO":"F5U657",
+        "COD_TIPO_DOC_CHOFER":"1",
+        "NRO_DOC_CHOFER":"44791512",
+        "NOMBRES_CHOFER":"JOSE",
+        "APELLIDOS_CHOFER":"ZAMBRANO",
+        "LIC_CONDUCIR_CHOFER":"Q44791512",
+        "NRO_DOCUMENTO_CLIENTE":"10415898890",
+        "RAZON_SOCIAL_CLIENTE":"LUIS ENRIQUE ZAMBRANO YACHA",
+        "TIPO_DOCUMENTO_CLIENTE":"6",
+        "NRO_DOCUMENTO_EMPRESA":"10447915125",
+        "TIPO_DOCUMENTO_EMPRESA":"6",
+        "RAZON_SOCIAL_EMPRESA":"JOSE LUIS ZAMBRANO YACHA",
+        "COD_UBIGEO_DESTINO":"150128",
+        "DIRECCION_DESTINO":"DIRECCION COMPLETA DE LLEGADA",
+        "COD_UBIGEO_ORIGEN":"150118",
+        "DIRECCION_ORIGEN":"DIRECCION COMPLETA DE PARTIDA",
+        "USUARIO_SOL_EMPRESA":"10447915125MIDEMSIE",
+        "PASS_SOL_EMPRESA":"985511933",
+        "PAS_FIRMA":"123456",
+        "TIPO_PROCESO" : "3",
+        "ID_TOKEN":"ad55559f-0852-4750-8a47-9b001f2a927d",
+        "CLAVE_TOKEN":"3D4yLhCWAQeqew2y+nFftA==",
+		"detalle":[
+			{
+				"ITEM" : "1",
+		        "UNIDAD_MEDIDA":"NIU",
+		        "CANTIDAD" : "1",
+		        "ORDER_ITEM" : "1",
+		        "CODIGO":"00001",
+		        "DESCRIPCION":"PRODUCTO DE PRUEBA"	
+			}
+		]
+}
+
+RESPUESTA:
+{
+    "hash_cpe": "c9W9xv6S9/lc4Iga5ZQzqWbXFR4=",
+    "cod_sunat": "0",
+    "msj_sunat": "7cd08a66-2315-4d3a-a334-be709200245f",
+    "hash_cdr": ""
+}
+
+
+TICKET GUIA TOKEN:
+
+http://localhost/sunat/facElectronicaUBL21/controller/controller_cpe_ticket_gr.php
+TIPO: POST
+ENVIO:
+{
+   "NRO_DOCUMENTO_EMPRESA":"10447915125",
+    "COD_TIPO_DOCUMENTO":"09",
+    "NRO_COMPROBANTE":"T001-0003000",
+    "ID_TOKEN":"ad55559f-0852-4750-8a47-9b001f2a927d",
+    "CLAVE_TOKEN":"3D4yLhCWAQeqew2y+nFftA==",
+    "TIPO_PROCESO" : "3",
+    "USUARIO_SOL_EMPRESA":"10447915125MIDEMSIE",
+    "PASS_SOL_EMPRESA":"985511933",
+    "TICKET":"7cd08a66-2315-4d3a-a334-be709200245f"
+}
+
+
+RESPUESTA:
+
+{
+    "hash_cpe": "",
+    "cod_sunat": "2108",
+    "msj_sunat": "Presentación fuera de fecha",
+    "hash_cdr": "/+dWSc6WZKkvZLN0PpMgVHibNm4=",
+    "ticket": "7cd08a66-2315-4d3a-a334-be709200245f"
+}

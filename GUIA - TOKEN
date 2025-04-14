@@ -1,0 +1,89 @@
+http://localhost/sunat/facElectronicaUBL21/controller/controller_cpe_guia.php
+GUIA REMISION TOKEN:
+TIPO: POST
+ENVIO:
+{
+	"NRO_COMPROBANTE":"T001-0003000",
+        "FECHA_DOCUMENTO" : "2019-12-27",
+        "COD_TIPO_DOCUMENTO":"09",
+        "NOTA":"ESTO ES UNA GUIA DE REMISION",
+        "ITEM_ENVIO" : "1",
+        "COD_MOTIVO_TRASLADO":"01",
+        "DESCRIPCION_MOTIVO_TRASLADO":"VENTA",
+        "COD_UND_PESO_BRUTO":"KGM",
+        "PESO_BRUTO" : "1000.0",
+        "TOTAL_BULTOS" : "2",
+        "COD_MODALIDAD_TRASLADO":"02",
+        "FECHA_INICIO":"2019-12-27",
+        "NRO_DOCUMENTO_TRANSPORTISTA":"20100066603",
+        "RAZON_SOCIAL_TRANSPORTISTA":"CREVPERU SA",
+        "TIPO_DOCUMENTO_TRANSPORTISTA":"6",
+        "PLACA_VEHICULO":"F5U657",
+        "COD_TIPO_DOC_CHOFER":"1",
+        "NRO_DOC_CHOFER":"44791512",
+        "NOMBRES_CHOFER":"JOSE",
+        "APELLIDOS_CHOFER":"ZAMBRANO",
+        "LIC_CONDUCIR_CHOFER":"Q44791512",
+        "NRO_DOCUMENTO_CLIENTE":"10415898890",
+        "RAZON_SOCIAL_CLIENTE":"LUIS ENRIQUE ZAMBRANO YACHA",
+        "TIPO_DOCUMENTO_CLIENTE":"6",
+        "NRO_DOCUMENTO_EMPRESA":"10447915125",
+        "TIPO_DOCUMENTO_EMPRESA":"6",
+        "RAZON_SOCIAL_EMPRESA":"JOSE LUIS ZAMBRANO YACHA",
+        "COD_UBIGEO_DESTINO":"150128",
+        "DIRECCION_DESTINO":"DIRECCION COMPLETA DE LLEGADA",
+        "COD_UBIGEO_ORIGEN":"150118",
+        "DIRECCION_ORIGEN":"DIRECCION COMPLETA DE PARTIDA",
+        "USUARIO_SOL_EMPRESA":"10447915125XXXXXX",
+        "PASS_SOL_EMPRESA":"CONTRASEÑA",
+        "PAS_FIRMA":"123456",
+        "TIPO_PROCESO" : "3",
+        "ID_TOKEN":"ad55559f-0852-4750-8a47-9b001f2a927d",
+        "CLAVE_TOKEN":"3D4yLhCWAQeqew2y+nFftA==",
+		"detalle":[
+			{
+				"ITEM" : "1",
+		        "UNIDAD_MEDIDA":"NIU",
+		        "CANTIDAD" : "1",
+		        "ORDER_ITEM" : "1",
+		        "CODIGO":"00001",
+		        "DESCRIPCION":"PRODUCTO DE PRUEBA"	
+			}
+		]
+}
+
+RESPUESTA:
+{
+    "hash_cpe": "c9W9xv6S9/lc4Iga5ZQzqWbXFR4=",
+    "cod_sunat": "0",
+    "msj_sunat": "7cd08a66-2315-4d3a-a334-be709200245f",
+    "hash_cdr": ""
+}
+
+
+TICKET GUIA TOKEN:
+
+http://localhost/sunat/facElectronicaUBL21/controller/controller_cpe_ticket_gr.php
+TIPO: POST
+ENVIO:
+{
+   "NRO_DOCUMENTO_EMPRESA":"10447915125",
+    "COD_TIPO_DOCUMENTO":"09",
+    "NRO_COMPROBANTE":"T001-0003000",
+    "ID_TOKEN":"ad55559f-0852-4750-8a47-9b001f2a927d",
+    "CLAVE_TOKEN":"3D4yLhCWAQeqew2y+nFftA==",
+    "TIPO_PROCESO" : "3",
+    "USUARIO_SOL_EMPRESA":"10447915125XXXXXXX",
+    "PASS_SOL_EMPRESA":"CONTRASEÑA",
+    "TICKET":"7cd08a66-2315-4d3a-a334-be709200245f"
+}
+
+
+RESPUESTA:
+{
+    "hash_cpe": "",
+    "cod_sunat": "2108",
+    "msj_sunat": "Presentación fuera de fecha",
+    "hash_cdr": "/+dWSc6WZKkvZLN0PpMgVHibNm4=",
+    "ticket": "7cd08a66-2315-4d3a-a334-be709200245f"
+}
